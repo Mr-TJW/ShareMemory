@@ -1,12 +1,15 @@
 CC = g++
 
-PROJECT = libparaShm.so
-
 INCLUDE = -I../include
 
-target : $(PROJECT)
+target : libparaShm.so libpublic.so
 
-$(PROJECT) : shareMemory.cpp
+libparaShm.so : shareMemory.cpp
+	$(CC) -shared -o $@ $< $(INCLUDE)
+	cp $@ ../lib
+	cp $@ /lib
+
+libpublic.so : public.cpp
 	$(CC) -shared -o $@ $< $(INCLUDE)
 	cp $@ ../lib
 	cp $@ /lib

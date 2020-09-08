@@ -5,7 +5,7 @@ LOCALDIR = .
 #CFLAGS =  -fPIC #-w
 INCLUDE = -I$(LOCALDIR)/include  \
           -I$(LOCALDIR)/../include
-LIB = -lpthread -L$(LOCALDIR)/../lib/ -lparaShm
+LIB = -lpthread -L$(LOCALDIR)/../lib/ -lparaShm -lpublic
 
 SRC = $(wildcard *.cpp *.c)
 OBJ = $(patsubst %.cpp,%.o,$(filter %.cpp,$(SRC)))  $(patsubst %.c,%.o,$(filter %.c,$(SRC)))

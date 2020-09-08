@@ -66,6 +66,7 @@ void host_info_config(HOST_INFO *host_info)
 ********************************************************************/
 int main(void)
 {   
+    char        tempstr[128] = {0};
     time_t      curtime = time(NULL);
     time_t      last_send_time = time(NULL);
     
@@ -82,6 +83,15 @@ int main(void)
 
     com     = new C_TcpClient(&host_info);   
     test    = new C_TEST(&host_info);
+    
+    if(SUCCESS == readIniFile("fk05.ini","功能配置表","是否为新版本终端",tempstr))
+    {
+        printf("是否是新版本终端 = %s\n",tempstr);
+    }
+    else
+    {
+        printf("readIniFile error");
+    }
     
 
     /* 仅作示例 demo 示例展示功能，实际处理请按业务需求 */

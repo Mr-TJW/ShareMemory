@@ -48,6 +48,7 @@ typedef enum tag_Progress_Id_Info
 #define LOG_DIR_PATH							"../log"	/* log 文件存放路径 */
 #define LOG_FILE_SIZE							1*1024*1024	/* 以字节为单位，1M */
 #define LOG_BUF_LEN								4096		/* 一行日志的最大长度 */
+#define INI_FILE_ITEM_LEN						128			/* ini 文件一行最长字节数 */
 
 #define SUCCESS									0
 #define	FAILURE									-1
@@ -131,8 +132,6 @@ typedef struct tag_Control_Command_Buf
     UCHAR       cmdBuf[CMD_BUF_MAX_LEN];    /* 命令内容 */
 }CTL_CMD_BUF;
 
-
-
 int 	set_terminal_time(const void *time_value,ENUM_TIME_TYPE time_type = TIME_TYPE_TIME);
 int 	get_terminal_time(void *time_value,ENUM_TIME_TYPE time_type = TIME_TYPE_TIME);
 void 	write_log(const char *file_name,const char *log_text,unsigned char time_flag);
@@ -149,5 +148,6 @@ void 	print_all_disable();
 void 	print_debug(const char *format, ...);
 void 	print_common(const char *format, ...);
 void 	print_warning(const char *format, ...);
+int 	readIniFile(const char *fileName,const char *segName,const char *itemName,char *result);
 
 #endif

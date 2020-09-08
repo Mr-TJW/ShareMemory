@@ -373,3 +373,86 @@ void print_warning(const char *format, ...)
     }
 }
 
+/*******************************************************************
+* funcname:	readIniFile
+* para:	    fileName 文件名 
+*           segName  段名
+*           itmeName 元素名
+*           result   返回的结果
+* function: 读取配置文件，先判断段名，在判断元素名
+* return:	读取成功 0，失败返回-1
+********************************************************************/
+int readIniFile(const char *fileName,const char *segName,const char *itemName,char *result)
+{   
+    int     i = 0;
+    FILE    *fp;
+    char    findSegFlag = 0;
+    char    segstr[INI_FILE_ITEM_LEN] = {0};
+    char    *itemstr;
+    char    tempstr[INI_FILE_ITEM_LEN] = {0};
+
+    if(NULL == result)
+    {
+        printf("result is NULL\n");
+        return FAILURE;
+    }
+
+    if(NULL == (fp = fopen(fileName,"r")))
+    {
+        perror("fopen error:");
+        return FAILURE;
+    }
+
+    fseek(fp,0L,SEEK_SET);
+    //printf("findSegFlag = 0\r\n");
+    while(!feof(fp))
+    {   
+        i++;
+        fgets(segstr,INI_FILE_ITEM_LEN,fp);
+        //printf("line %d : %s\n",i,segstr);
+        if(0 == findSegFlag)
+        {
+            if(NULL != strchr(segstr,'['))
+            {   
+                //printf("find segstr,segstr = %s,segname = %s\r\n",segstr,segName);
+                if(NULL != strstr(segstr,segName))
+                {
+                    findSegFlag = 1;
+                    printf("findSegFlag = 1\r\n");
+                }
+            }
+        }
+        else
+        {   
+            if(NULL != strstr(segstr,itemName))
+            {   
+                //printf("find itemName\r\n");
+                if(NULL != (itemstr = strchr(segstr,'=')))
+                {   
+                    itemstr++;
+                    while(' ' == (*itemstr))
+                    {
+                        itemstr++;
+                    }
+                    while(('\n' != *itemstr) && (';' != *itemstr) && (NULL != itemstr))
+                    {
+                        *result = *itemstr;
+                        result++;
+                        itemstr++;
+                    }
+
+                    return SUCCESS;
+                }
+                else
+                {   
+                    //printf("failure LINE = %d\r\n",__LINE__);
+                    return FAILURE;
+                }
+            }
+        }
+        memset(segstr,0,INI_FILE_ITEM_LEN);
+    }
+
+    //printf("failure LINE = %d\r\n",__LINE__);
+    return FAILURE;
+}
