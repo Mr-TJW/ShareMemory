@@ -440,7 +440,7 @@ int readIniFile(const char *fileName,const char *segName,const char *itemName,ch
                         result++;
                         itemstr++;
                     }
-
+                    *result = 0;
                     return SUCCESS;
                 }
                 else

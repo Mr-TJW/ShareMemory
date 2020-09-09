@@ -91,6 +91,7 @@ for (i=0; i < MAXFILE; i++)
 
 至此为止，一个简单的守护进程就建立起来了。<font color=red>注意守护进程一般需要在 root 权限下运行。</font>
 
+
 ## <font color=red>示例</font>
 
 ```c

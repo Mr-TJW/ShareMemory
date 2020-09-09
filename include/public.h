@@ -77,6 +77,13 @@ extern void (*PRINT_ENABLE[PRINT_SWTICH_NUM])(void);
 extern void (*PRINT_DISABLE[PRINT_SWTICH_NUM])(void);
 extern void (*PRINTF[PRINT_SWTICH_NUM])(const char *format, ...);
 
+typedef enum _tag_Second_Uint_Time_Val
+{
+    TIME_VAL_SEC 	= 1,
+    TIME_VAL_MIN 	= 60,
+	TIME_VAL_HOUR 	= 3600,
+	TIME_VAL_DAY	= 86400
+}SEC_UINT_TIME_VAL;
 
 /*年月日时分秒*/
 typedef struct _DATE_TIME_S_
