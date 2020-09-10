@@ -73,7 +73,7 @@ void Daemon::InitDaemon()
 		exit(1);
 	}
 	
-	if (chdir("/") == -1)       //改变当前工作目录为根目录
+	if (chdir(TASKD_CHDIR_DIR) == -1)       //改变当前工作目录为根目录
 	{   
         MyWriteLog("chdir error ");
 		exit(1);
@@ -309,11 +309,247 @@ void Daemon::createTimerInitSignal()
 * funcname:	checkTaskRunState
 * para:	
 * function:	检测程序运行状态
-* return:	
+* return:	状态获取成功返回 TASK_STAT_STATE,stat 状态,状态获取失败返回-1
 ********************************************************************/
-int Daemon::checkTaskRunState(const char *taskName)
+int Daemon::getTaskRunState(const char *taskName)
 {
+	FILE	*fp;
+	char	*tempPtr;
+	char	readBuf[256];
+	char	runningCnt = 0;	/* 运行数量 */
+	char	zombieFlag = 0;	/* 僵尸进程标志 */
+	char	pid[16],tty[16],stat[16],time[16],cmd[64];
 
+	if(NULL == (fp = popen("ps ax","r")))
+	{
+		MyWriteLog("popen error");
+		return -1;
+	}
+
+	while(!feof(fp))
+	{
+		fgets(readBuf,sizeof(readBuf),fp);
+		sscanf(readBuf,"%s %s %s %s %s",pid,tty,stat,time,cmd);
+		if(NULL != (tempPtr = strchr(cmd,'[')))
+		{	
+			tempPtr++;
+			cmd = tempPtr;
+		}
+		if(NULL != (tempPtr = strchr(cmd,']')))
+		{	
+			*tempPtr = 0;
+		}
+		if(NULL != (tempPtr = strrchr(cmd,'/')))
+		{	
+			tempPtr++;
+			cmd = tempPtr;
+		}
+
+		if(!strcmp(taskName,cmd))
+		{	
+			runningCnt++;
+			if(!strcmp(stat,"Z"))
+			{
+				zombieFlag = true;
+			}
+		}
+	}
+	pclose(fp);
+
+	if(true == zombieFlag)
+	{	
+		sprintf(logBuf,"\'%s\'任务处于僵死状态，僵尸进程");
+		MyWriteLog(logBuf);
+		return TASK_STAT_ZOMBIE;
+	}
+	else if(0 == runningCnt)
+	{
+		sprintf(logBuf,"\'%s\'任务未运行");
+		MyWriteLog(logBuf);
+		return TASK_STAT_NULL;
+	}
+	else if(1 == runningCnt)
+	{
+		sprintf(logBuf,"\'%s\'任务正在运行中");
+		MyWriteLog(logBuf);
+		return TASK_STAT_NORMAL;
+	}
+	else
+	{
+		sprintf(logBuf,"多个\'%s\'任务在运行");
+		MyWriteLog(logBuf);
+		return TASK_STAT_REPEAT;
+	}
+}
+
+/*******************************************************************
+* funcname:	getTaskPid
+* para:	
+* function:	获取指定进程 pid
+* return:	获取成功返回 pid，获取失败返回-1
+********************************************************************/
+int Daemon::getTaskPid(const char *taskName)
+{
+	FILE	*fp;
+	char	*tempPtr;
+	int		result = -1;
+	char	readBuf[256];
+	char	pid[16],tty[16],stat[16],time[16],cmd[64];
+
+	if(NULL == (fp = popen("ls ax","r")))
+	{
+		MyWriteLog("getTaskPid error");
+		return -1;
+	}
+
+	while(!feof(fp))
+	{
+		fgets(readBuf, sizeof(readBuf), fp);
+		sscanf(readBuf, "%s %s %s %s %s",pid,tty,stat,time,cmd);
+		if(NULL != (tempPtr = strchr(cmd,"[")))
+		{
+			tempPtr++;
+			cmd = tempPtr;
+		}
+		if(NULL != (tempPtr = strchr(cmd,"]")))
+		{
+			*tempPtr = 0;
+		}
+		if(NULL != (tempPtr = strrchr(cmd,"/")))
+		{
+			*tempPtr = 0;
+		}
+		if(NULL != strcmp(cmd,taskName))
+		{	
+			result = atoi(pid);
+			break;
+		}
+	}
+	pclose(fp);
+	return result;
+}
+
+/*******************************************************************
+* funcname:	startOneTask
+* para:		taskInf 任务信息
+* function:	启动进程
+* return:	成功SUCCESS,失败FAILURE
+********************************************************************/
+int Daemon::startOneTask(TASK_INFO *taskInf)
+{	
+	int		ret;
+	pid_t 	childPid;
+	char	cmdBuf[64];
+
+	if(!taskInf)
+	{
+		MyWriteLog("taskInf 为空指针");
+		return FAILURE;
+	}
+
+	if(TASK_STAT_NULL != getTaskRunState(taskInf->name))
+	{
+		sprintf(logBuf,"%s任务正在运行中，禁止再次运行",taskInf->name);
+		MyWriteLog(logBuf);
+		return FAILURE;
+	}
+
+	childPid = vfork();
+	if(childPid < 0)
+	{
+		sprintf(logBuf,"%s任务调用 vfork 失败",taskInf->name);
+		MyWriteLog(logBuf);
+		return FAILURE;
+	}
+	else if(childPid == 0)	//子进程
+	{
+		sprintf(cmdBuf,"./%s &",taskInf->name);		//创建守护进程时，chdir指定过了工作目录
+		if(execl("bin/bsh","ash","-c",cmdBuf,(char *)0) < 0)
+		{
+			sprintf(logBuf,"%s任务启动失败",taskInf->name);
+			MyWriteLog(logBuf);
+			return FAILURE;
+		}
+		sprintf(logBuf,"守护进程创建%s子进程成功",taskInf->name);
+		MyWriteLog(logBuf);
+	}
+	else
+	{
+		usleep(500*1000);
+		if((ret = getTaskPid(taskInf->name)) < 0)
+		{
+			sprintf(logBuf,"获取%s任务 pid 失败",taskInf->name);
+			MyWriteLog(logBuf);
+			return FAILURE;
+		}
+
+		taskInf->pid = ret;
+		taskInf->rstFailCnt = 0;
+		taskInf->leftHeartBeatVal = heartBeatMaxVal;
+	}
+	return SUCCESS;
+}
+
+/*******************************************************************
+* funcname:	stopOneTask
+* para:		taskInf 任务信息
+* function:	杀掉任务
+* return:	成功SUCCESS,失败FAILURE
+********************************************************************/
+int Daemon::stopOneTask(TASK_INFO *taskInf)
+{	
+	int ret;
+
+	if(!taskInf)
+	{
+		MyWriteLog("taskInf 为空指针");
+		return FAILURE;
+	}
+
+	ret = getTaskRunState(taskInf->name);
+	switch(ret)
+	{
+		case(FAILURE) :
+			MyWriteLog("stopOneTask getTaskRunState error");
+			return FAILURE;
+
+		case(TASK_STAT_NULL):
+			return SUCCESS;
+
+		case(TASK_STAT_NORMAL):
+			if(taskInf->pid > 0)
+
+			break;
+
+		default:
+		{
+
+		}
+	}
+	if(FAILURE == ret)
+	{
+		
+	}
+	else if(TASK_STAT_NULL == ret)
+	{
+		
+	}
+	else if()
+}
+
+/*******************************************************************
+* funcname:	rstOneTask
+* para:		taskInf 任务信息
+* function:	重启任务
+* return:	成功SUCCESS,失败FAILURE
+********************************************************************/
+int Daemon::restartOneTask(TASK_INFO *taskInf)
+{
+	if(!taskInf)
+	{
+		MyWriteLog("taskInf 为空指针");
+		return FAILURE;
+	}
 }
 
 /*******************************************************************
