@@ -3,17 +3,18 @@
 
 #include "public.h"
 
-#define TASKD_LOG_NAME      "taskd"     //守护进程日志名
-#define TASK_NAME_LEN       128         
+#define TASKD_LOG_NAME          "taskd"     //守护进程日志名
+#define TASK_NAME_LEN           128         
 
-#define TASK_CONFIG_FILE    "task.ini"  //任务配置文件
-#define TASKD_CHDIR_DIR     "/"
+#define TASK_CONFIG_FILE        "task.ini"  //任务配置文件
+#define TASKD_CHDIR_DIR         "/"
 
 
 #define MSG_QUEUE_KEY       0x11FF      //消息队列键值
 #define TASKD_MSG_FILE      "task.msg"  //消息队列标识存储文件
 
 #define TIMER_TIMING_VAL    1           //定时器定时1s
+#define WAIT_TASK_STOP_TIME
 
 /* 定时器定时值 */
 #define TIMER_UNIT_NUM      5           //定时器数量
@@ -82,6 +83,7 @@ private:
     int     startOneTask(TASK_INFO *taskInf);
     int     stopOneTask(TASK_INFO *taskInf);
     int     restartOneTask(TASK_INFO *taskInf);
+    int     waitTaskStop(const char *taskName);
 };
 
 #endif

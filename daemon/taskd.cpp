@@ -498,7 +498,8 @@ int Daemon::startOneTask(TASK_INFO *taskInf)
 ********************************************************************/
 int Daemon::stopOneTask(TASK_INFO *taskInf)
 {	
-	int ret;
+	int 	ret;
+	char	cmdBuf[64];
 
 	if(!taskInf)
 	{
@@ -518,6 +519,20 @@ int Daemon::stopOneTask(TASK_INFO *taskInf)
 
 		case(TASK_STAT_NORMAL):
 			if(taskInf->pid > 0)
+			{
+				if(kill(taskInf->pid,SIGKILL) < 0)	//给指定进程发送终止信号
+				{
+					MyWriteLog("stopOneTask kill 信号发送失败");
+					return FAILURE;
+				}
+
+				waitpid(taskInf->pid,NULL,0);		//等待子进程运行结束
+			}
+			else
+			{
+				sprintf(cmdBuf,"killall %s",taskInf->name);
+				system(cmdBuf);
+			}
 
 			break;
 
@@ -526,15 +541,25 @@ int Daemon::stopOneTask(TASK_INFO *taskInf)
 
 		}
 	}
-	if(FAILURE == ret)
+killall:
+	
+
+}
+
+/*******************************************************************
+* funcname:	waitTaskStop
+* para:		taskName 进程名
+* function:	等待指定进程运行结束
+* return:	等待指定时长未结束返回失败，指定时长内结束返回成功
+********************************************************************/
+int Daemon waitTaskStop(const char *taskName)
+{
+	UCHAR cnt = 0;
+	while(TASK_STAT_NULL != getTaskRunState(taskName))
 	{
-		
+		cnt++;
+		if(cnt > )
 	}
-	else if(TASK_STAT_NULL == ret)
-	{
-		
-	}
-	else if()
 }
 
 /*******************************************************************
